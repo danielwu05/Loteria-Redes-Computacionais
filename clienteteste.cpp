@@ -4,8 +4,51 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <ctime>
+#include <iomanip>
+#include <thread>
+#include <string>
+
+
 
 using namespace std;
+
+
+void readimput(int clientSocket){
+
+    while(true){
+
+    string input;
+    cin >> input;
+    if(input == "\x03"){
+        break;
+    }
+    const char* message = input.c_str();
+    
+
+    if (send(clientSocket,
+             message,
+             strlen(message),
+             0) == -1)
+    {
+        perror("send");
+        close(clientSocket);
+        break;       
+    }
+
+    cout << "Message sent!" << endl;
+
+
+
+    }
+
+
+
+
+
+
+}
+
 
 int main()
 {
@@ -31,21 +74,13 @@ int main()
         return 1;
     }
 
-    cout << "Connected to server!" << endl;
+    time_t agora = time(nullptr);
+    tm* tempo_local = localtime(&agora);
 
-    const char* message = "Hello, server!";
-
-    if (send(clientSocket,
-             message,
-             strlen(message),
-             0) == -1)
-    {
-        perror("send");
-        close(clientSocket);
-        return 1;
-    }
-
-    cout << "Message sent!" << endl;
+    cout <<put_time(tempo_local,"%H:%M   ") << "Connected to server!" << endl;
+    
+    thread t1(readimput, clientSocket);
+    t1.join();
 
     close(clientSocket);
 

@@ -2,11 +2,42 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <thread>
 
 using namespace std;
 
+int rvinput(int clientSocket){
+
+    while (true){
+ char buffer[1024] = {0};
+
+    ssize_t bytesReceived =
+        recv(clientSocket,
+             buffer,
+             sizeof(buffer) - 1,
+             0);
+
+    if (bytesReceived == -1) {
+        perror("recv");
+        return -1;
+    }
+    else {
+        buffer[bytesReceived] = '\0';
+
+        cout << "Message from client: "
+             << buffer << endl;
+    }
+    }   
+
+    return 0;
+}
+
+
+
+
 int main()
 {
+
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     if (serverSocket == -1) {
@@ -34,7 +65,7 @@ int main()
         return 1;
     }
 
-    cout << "Server waiting on port 8080..." << endl;
+    cout << "Server waiting on port 9090..." << endl;
 
     int clientSocket =
         accept(serverSocket, nullptr, nullptr);
@@ -47,23 +78,8 @@ int main()
 
     cout << "Client connected!" << endl;
 
-    char buffer[1024] = {0};
-
-    ssize_t bytesReceived =
-        recv(clientSocket,
-             buffer,
-             sizeof(buffer) - 1,
-             0);
-
-    if (bytesReceived == -1) {
-        perror("recv");
-    }
-    else {
-        buffer[bytesReceived] = '\0';
-
-        cout << "Message from client: "
-             << buffer << endl;
-    }
+    thread t1(rvinput, clientSocket);
+    t1.join();
 
     close(clientSocket);
     close(serverSocket);
