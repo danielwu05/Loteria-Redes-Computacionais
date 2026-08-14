@@ -7,13 +7,13 @@
 #include <mutex>
 #include <netinet/in.h>
 #include <queue>
+#include <random>
 #include <sstream>
 #include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <thread>
 #include <unistd.h>
-#include <random>
 
 using namespace std;
 
@@ -144,7 +144,6 @@ int main() {
 
   t1.join();
   t2.join();
-
 
   close(clientSocket);
   close(serverSocket);
