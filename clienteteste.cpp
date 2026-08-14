@@ -1,88 +1,83 @@
-#include <iostream>
-#include <cstring>
 #include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
+#include <cstring>
 #include <ctime>
 #include <iomanip>
-#include <thread>
+#include <iostream>
+#include <netinet/in.h>
 #include <string>
-
-
+#include <sys/socket.h>
+#include <thread>
+#include <unistd.h>
 
 using namespace std;
 
+void listen_server(int clientSocket) {
+  while (true) {
 
-void readimput(int clientSocket){
+    char buffer[1024] = {0};
 
-    while(true){
+    ssize_t bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+
+    if (bytesReceived == -1) {
+      perror("recv");
+    } else if (bytesReceived == 0) {
+      cout << "Client has disconnected from the server" << endl;
+      break;
+
+    } else {
+      buffer[bytesReceived] = '\0';
+
+      cout << "Message from client: " << buffer << endl;
+    }
+  }
+}
+
+void input(int clientSocket) {
+  while (true) {
 
     string input;
-    cin >> input;
-    if(input == "\x03"){
-        break;
-    }
-    const char* message = input.c_str();
-    
+    getline(cin, input);
+    const char *message = input.c_str();
 
-    if (send(clientSocket,
-             message,
-             strlen(message),
-             0) == -1)
-    {
-        perror("send");
-        close(clientSocket);
-        break;       
+    if (send(clientSocket, message, strlen(message), 0) == -1) {
+      perror("send");
+      close(clientSocket);
+      break;
     }
 
     cout << "Message sent!" << endl;
-
-
-
-    }
-
-
-
-
-
-
+  }
 }
+int main() {
+  int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
 
+  if (clientSocket == -1) {
+    perror("socket");
+    return 1;
+  }
 
-int main()
-{
-    int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+  sockaddr_in serverAddress{};
+  serverAddress.sin_family = AF_INET;
+  serverAddress.sin_port = htons(9090);
 
-    if (clientSocket == -1) {
-        perror("socket");
-        return 1;
-    }
+  inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr);
 
-    sockaddr_in serverAddress{};
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(9090);
-
-    inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr);
-
-    if (connect(clientSocket,
-                (struct sockaddr*)&serverAddress,
-                sizeof(serverAddress)) == -1)
-    {
-        perror("connect");
-        close(clientSocket);
-        return 1;
-    }
-
-    time_t agora = time(nullptr);
-    tm* tempo_local = localtime(&agora);
-
-    cout <<put_time(tempo_local,"%H:%M   ") << "Connected to server!" << endl;
-    
-    thread t1(readimput, clientSocket);
-    t1.join();
-
+  if (connect(clientSocket, (struct sockaddr *)&serverAddress,
+              sizeof(serverAddress)) == -1) {
+    perror("connect");
     close(clientSocket);
+    return 1;
+  }
 
-    return 0;
+  cout << "Connected to server!" << endl;
+
+  thread t1(input, clientSocket);
+  thread t2(listen_server, clientSocket);
+
+  t1.join();
+  t2.join();
+
+  close(clientSocket);
+
+  return 0;
 }
