@@ -1,8 +1,9 @@
 all: client server
 
 client: clienteteste.cpp
-	g++ clienteteste.cpp -o build/client
+	mkdir -p build
+	g++ -std=c++20 -Wall -Wextra -pedantic clienteteste.cpp -pthread -o build/cliente
 
-server: serverteste.cpp
-	g++ serverteste.cpp -o build/server
-
+server: serverteste.cpp loteria.cpp
+	mkdir -p build
+	g++ -std=c++20 -Wall -Wextra -pedantic serverteste.cpp -pthread -o build/server

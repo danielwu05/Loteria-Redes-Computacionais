@@ -1,7 +1,4 @@
 #include <arpa/inet.h>
-#include <cstring>
-#include <ctime>
-#include <iomanip>
 #include <iostream>
 #include <netinet/in.h>
 #include <string>
@@ -21,13 +18,13 @@ void listen_server(int clientSocket) {
     if (bytesReceived == -1) {
       perror("recv");
     } else if (bytesReceived == 0) {
-      cout << "Client has disconnected from the server" << endl;
+      cout << "Servidor desconectou" << endl;
       break;
 
     } else {
       buffer[bytesReceived] = '\0';
 
-      cout << "Message from client: " << buffer << endl;
+      cout << buffer;
     }
   }
 }
@@ -36,16 +33,18 @@ void input(int clientSocket) {
   while (true) {
 
     string input;
-    getline(cin, input);
-    const char *message = input.c_str();
+    if (!getline(cin, input)) {
+      shutdown(clientSocket, SHUT_WR);
+      break;
+    }
 
-    if (send(clientSocket, message, strlen(message), 0) == -1) {
+    string message = input + "\n";
+
+    if (send(clientSocket, message.c_str(), message.size(), 0) == -1) {
       perror("send");
       close(clientSocket);
       break;
     }
-
-    cout << "Message sent!" << endl;
   }
 }
 int main() {
@@ -69,7 +68,7 @@ int main() {
     return 1;
   }
 
-  cout << "Connected to server!" << endl;
+  cout << "Conectado ao servidor. Digite comandos ou apostas." << endl;
 
   thread t1(input, clientSocket);
   thread t2(listen_server, clientSocket);
