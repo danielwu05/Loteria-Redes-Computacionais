@@ -144,7 +144,6 @@ int main() {
   t1.join();
   t2.join();
 
->>>>>>> 112ab7e (a)
   close(clientSocket);
   close(serverSocket);
 
