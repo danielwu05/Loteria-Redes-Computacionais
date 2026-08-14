@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <thread>
 #include <unistd.h>
+#include <random>
 
 using namespace std;
 
@@ -144,6 +145,10 @@ int main() {
   t1.join();
   t2.join();
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 1b0e2dd2fadfecf81ad89430940cbdd4f88dbf73
   close(clientSocket);
   close(serverSocket);
 
