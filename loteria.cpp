@@ -154,7 +154,7 @@ vector<int> extrairNumerosDaLinha(const string &linha) {
   }
 
   if (!stream.eof()) {
-    throw invalid_argument("linha contem valor que nao e numero");
+    throw invalid_argument("linha possui valor que nao e numero");
   }
 
   return numeros;

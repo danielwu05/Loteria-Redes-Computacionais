@@ -164,7 +164,7 @@ void sortearPeriodicamente(int clientSocket) {
     mensagem << "Sorteio: " << numerosParaTexto(resultado.numerosSorteados);
 
     if (!tinhaApostas) {
-      mensagem << "\nNenhuma aposta registrada neste ciclo.";
+      mensagem << "\nNenhuma aposta foi registrada neste ciclo.";
     } else {
       for (size_t i = 0; i < resultado.resultados.size(); ++i) {
         const ResultadoAposta &aposta = resultado.resultados[i];

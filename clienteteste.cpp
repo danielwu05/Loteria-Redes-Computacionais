@@ -68,7 +68,7 @@ int main() {
     return 1;
   }
 
-  cout << "Conectado ao servidor. Digite comandos ou apostas." << endl;
+  cout << "Conectado ao servidor. Digite os comandos ou apostas." << endl;
 
   thread t1(input, clientSocket);
   thread t2(listen_server, clientSocket);
