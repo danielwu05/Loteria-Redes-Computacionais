@@ -8,9 +8,13 @@ class Lottery:
         self.final = 100
         self.count = 5
 
-    def setting_config(self, ini, fi, co):
+    def setting_initial(self, ini):
         self.initial = ini
-        self.final = fi
+
+    def setting_final(self,fi):
+        self.final = fi    
+
+    def setting_count(self,co):
         self.count = co
 
     def sorting_numbers(self):
