@@ -8,7 +8,6 @@ response = input().lower()
 
 if response == "s":
     print("Digite o número inicial do escopo: ")
-    ini = int(input())
 
     print("Digite o número final do escopo: ")
     fi = int(input())
@@ -16,8 +15,9 @@ if response == "s":
     print("Digite a quantidade de números a serem sorteados: ")
     co = int(input())
 
-    loteria.setting_config(ini, fi, co)
-
+    loteria.setting_initial(ini)
+    loteria.setting_final(fi)
+    loteria.setting_count(co)
 
 numbers = []
 
