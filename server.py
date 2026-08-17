@@ -8,6 +8,9 @@ client_guess = []
 
 placeholder_array = [1, 2, 3, 4, 5, 6]
 
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
 
 def process_input(conn_socket):
     while True:
@@ -53,31 +56,34 @@ def send_results(conn_socket):
             break
 
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+def main():
 
-host = "localhost"
-port = 8080
+    host = "localhost"
+    port = 8080
 
-s.bind((host, port))
-s.listen()
+    s.bind((host, port))
+    s.listen()
 
-(conn_socket, addr) = s.accept()
+    (conn_socket, addr) = s.accept()
 
-current_time = datetime.now().strftime("%H:%M")
+    current_time = datetime.now().strftime("%H:%M")
 
-time_connected = f"{current_time} - CONECTADO!!"
+    time_connected = f"{current_time} - CONECTADO!!"
 
-conn_socket.send(time_connected.encode("utf-8"))
+    conn_socket.send(time_connected.encode("utf-8"))
 
-t1 = threading.Thread(target=process_input, args=(conn_socket,))
-t2 = threading.Thread(target=send_results, args=(conn_socket,))
+    t1 = threading.Thread(target=process_input, args=(conn_socket,))
+    t2 = threading.Thread(target=send_results, args=(conn_socket,))
 
-t1.start()
-t2.start()
+    t1.start()
+    t2.start()
 
-t1.join()
-t2.join()
+    t1.join()
+    t2.join()
 
-conn_socket.close()
-s.close()
+    conn_socket.close()
+    s.close()
+
+
+if __name__ == "__main__":
+    main()
