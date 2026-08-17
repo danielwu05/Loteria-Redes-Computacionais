@@ -2,3 +2,5 @@ clienttest.py
 __pycache__/ 
 serverObjTest.py 
 servertest.py
+*.pyc
+test.py
