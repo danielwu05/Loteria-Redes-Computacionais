@@ -8,7 +8,6 @@ class Server:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.switch = [False, False, False, False]
 
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -38,21 +37,17 @@ class Server:
                     if input[0][0] == ":" and input[1].isnumeric() and len(input) == 2:
                         if input[0] == ":inicio":
                             print("inicio")
-                            self.switch[0] = True
                             lot.setting_initial(int(input[1]))
                         elif input[0] == ":fim":
                             print("fim")
-                            self.switch[1] = True
                             lot.setting_final(int(input[1]))
                         elif input[0] == ":qtd":
                             print("qtd")
-                            self.switch[2] = True
                             lot.setting_count(int(input[1]))
                         else:
                             print("invalid command")
                     elif all(item.isnumeric() for item in input):
-                        self.switch[3] = True
-                        self.client_guess = input
+                        self.client_guess = [int(char) for char in input]
                         self.result_array = lot.sorting_numbers()
                         self.correct = lot.checking_numbers(
                             self.client_guess, self.result_array
@@ -65,13 +60,14 @@ class Server:
     def send_results(self):
         while True:
             try:
-                if all(self.switch):
-                    print("lottery complete")
-                    self.switch[:] = [False] * len(self.switch)
-                    message = f"\n user guess: {self.client_guess} \n casino results: {self.result_array} \n correct numbers: {self.correct}"
-                    self.conn_socket.send(message.encode("utf-8"))
+                time.sleep(60)
+                print("lottery complete")
+                message = f"\n user guess: {self.client_guess} \n casino results: {self.result_array} \n correct numbers: {self.correct}"
+                self.conn_socket.send(message.encode("utf-8"))
+                self.client_guess.clear()
+                self.correct.clear()
+                self.result_array.clear()
 
-                time.sleep(0.1)
             except KeyboardInterrupt:
                 break
 
