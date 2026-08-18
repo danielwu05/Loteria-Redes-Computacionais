@@ -1,6 +1,7 @@
 import socket
-import string
 from datetime import datetime
+import time
+from lottery import Lottery
 
 
 class Server:
@@ -21,7 +22,10 @@ class Server:
         time_connected = f"{current_time} - CONECTADO!!"
         self.conn_socket.send(time_connected.encode("utf-8"))
 
+        print(f"server online! addr: {addr} ")
+
     def process_input(self):
+        lot = Lottery()
         while True:
             try:
                 bytesReceived = self.conn_socket.recv(1024)
@@ -31,22 +35,28 @@ class Server:
                 else:
                     message = bytesReceived.decode("utf-8")
                     input = message.split(" ")
-                    if (
-                        input[0][0] == ":"
-                        and input[0][1].isnumeric()
-                        and len(input[0]) == 2
-                    ):
+                    if input[0][0] == ":" and input[1].isnumeric() and len(input) == 2:
                         if input[0] == ":inicio":
+                            print("inicio")
                             self.switch[0] = True
+                            lot.setting_initial(int(input[1]))
                         elif input[0] == ":fim":
+                            print("fim")
                             self.switch[1] = True
+                            lot.setting_final(int(input[1]))
                         elif input[0] == ":qtd":
+                            print("qtd")
                             self.switch[2] = True
+                            lot.setting_count(int(input[1]))
                         else:
                             print("invalid command")
                     elif all(item.isnumeric() for item in input):
                         self.switch[3] = True
                         self.client_guess = input
+                        self.result_array = lot.sorting_numbers()
+                        self.correct = lot.checking_numbers(
+                            self.client_guess, self.result_array
+                        )
                     else:
                         print("input invalid")
             except KeyboardInterrupt:
@@ -58,8 +68,10 @@ class Server:
                 if all(self.switch):
                     print("lottery complete")
                     self.switch[:] = [False] * len(self.switch)
-                    message = f"user guess: {self.client_guess} \n casino results: {self.client_guess}"
+                    message = f"\n user guess: {self.client_guess} \n casino results: {self.result_array} \n correct numbers: {self.correct}"
                     self.conn_socket.send(message.encode("utf-8"))
+
+                time.sleep(0.1)
             except KeyboardInterrupt:
                 break
 
