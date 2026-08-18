@@ -2,63 +2,82 @@ import socket
 import threading
 import sys
 
-def listen_server(client_socket):
-    while True:
+
+class GameClient:
+    def __init__(self, host: str = "127.0.0.1", port: int = 9090):
+        self.host = host
+        self.port = port
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.is_running = False
+
+    def connect(self) -> bool:
+        """Conecta o socket ao servidor remoto."""
         try:
-            data = client_socket.recv(1024)
-            
-            if not data:
-                print("\nServidor desconectou")
+            self.socket.connect((self.host, self.port))
+            self.is_running = True
+            print("Conectado ao servidor. Digite os comandos ou apostas.")
+            return True
+        except Exception as e:
+            print(f"Erro ao conectar ao servidor: {e}")
+            return False
+
+    def listen_server(self):
+        """Thread responsável por receber mensagens do servidor."""
+        while self.is_running:
+            try:
+                data = self.socket.recv(1024)
+                if not data:
+                    print("\nServidor desconectou")
+                    self.is_running = False
+                    break
+
+                mensagem = data.decode("utf-8", errors="replace")
+                print(mensagem, end="")
+            except Exception:
                 break
 
-            print(data.decode("utf-8", errors="replace"), end="")
-            
-        except Exception as e:
-            break
+    def input_handler(self):
+        """Thread responsável por capturar entrada do teclado e enviar."""
+        while self.is_running:
+            try:
+                user_input = sys.stdin.readline()
+                if not user_input:
+                    self.socket.shutdown(socket.SHUT_WR)
+                    self.is_running = False
+                    break
 
-def input_handler(client_socket):
-    while True:
-        try:
-            user_input = sys.stdin.readline()
-            
-            if not user_input:
-                client_socket.shutdown(socket.SHUT_WR)
+                self.socket.sendall(user_input.encode("utf-8"))
+            except Exception:
+                self.socket.close()
+                self.is_running = False
                 break
-        
-            client_socket.sendall(user_input.encode("utf-8"))
-            
-        except Exception as e:
-            client_socket.close()
-            break
 
+    def start(self):
+        """Inicializa as threads de escuta e envio."""
+        if not self.connect():
+            return
 
-def main():
+        t_input = threading.Thread(target=self.input_handler)
+        t_listen = threading.Thread(target=self.listen_server)
 
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
-    host = "127.0.0.1"
-    port = 9090
+        t_input.start()
+        t_listen.start()
 
-    try:
-        client_socket.connect((host, port))
-    except Exception as e:
-        print(f"Erro ao conectar na árvore central: {e}")
-        return
+        # Aguarda a conclusão das threads
+        t_input.join()
+        t_listen.join()
 
-    print("Conectado ao servidor. Digite os comandos ou apostas.")
+        self.close()
 
- 
-    t1 = threading.Thread(target=input_handler, args=(client_socket,))
-    t2 = threading.Thread(target=listen_server, args=(client_socket,))
-
-    t1.start()
-    t2.start()
-
-    t1.join()
-    t2.join()
-
-    client_socket.close()
+    def close(self):
+        """Fecha a conexão do socket com segurança."""
+        self.is_running = False
+        try:
+            self.socket.close()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
-    main()
+    client = GameClient(host="127.0.0.1", port=9090)
+    client.start()
