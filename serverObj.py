@@ -12,6 +12,10 @@ class Server:
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
+        self.client_guess = []
+        self.correct = []
+        self.result_array = []
+
     def start(self):
         self.s.bind((self.host, self.port))
         self.s.listen()
@@ -21,7 +25,7 @@ class Server:
         time_connected = f"{current_time} - CONECTADO!!"
         self.conn_socket.send(time_connected.encode("utf-8"))
 
-        print(f"server online! addr: {addr} ")
+        print("server online!")
 
     def process_input(self):
         lot = Lottery()
@@ -34,7 +38,7 @@ class Server:
                 else:
                     message = bytesReceived.decode("utf-8")
                     input = message.split(" ")
-                    if input[0][0] == ":" and input[1].isnumeric() and len(input) == 2:
+                    if len(input) == 2 and input[0][0] == ":" and input[1].isnumeric():
                         if input[0] == ":inicio":
                             print("inicio")
                             lot.setting_initial(int(input[1]))
@@ -60,13 +64,13 @@ class Server:
     def send_results(self):
         while True:
             try:
-                time.sleep(60)
-                print("lottery complete")
+                time.sleep(10)
                 message = f"\n user guess: {self.client_guess} \n casino results: {self.result_array} \n correct numbers: {self.correct}"
-                self.conn_socket.send(message.encode("utf-8"))
-                self.client_guess.clear()
-                self.correct.clear()
-                self.result_array.clear()
+                if self.client_guess:
+                    self.conn_socket.send(message.encode("utf-8"))
+                    self.client_guess.clear()
+                    self.correct.clear()
+                    self.result_array.clear()
 
             except KeyboardInterrupt:
                 break
