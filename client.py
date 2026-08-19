@@ -32,9 +32,10 @@ class GameClient:
                     break
 
                 mensagem = data.decode("utf-8", errors="replace")
-                print(mensagem, end="")
+                print(mensagem, end="", flush=True)
             except Exception:
                 break
+        self.close()
 
     def input_handler(self):
         """Thread responsável por capturar entrada do teclado e enviar."""
@@ -48,26 +49,28 @@ class GameClient:
 
                 self.socket.sendall(user_input.encode("utf-8"))
             except Exception:
-                self.socket.close()
-                self.is_running = False
                 break
+        self.close()
+              
 
     def start(self):
         """Inicializa as threads de escuta e envio."""
         if not self.connect():
             return
 
-        t_input = threading.Thread(target=self.input_handler)
-        t_listen = threading.Thread(target=self.listen_server)
+        t_input = threading.Thread(target=self.input_handler, daemon=True)
+        t_listen = threading.Thread(target=self.listen_server, daemon=True)
 
         t_input.start()
         t_listen.start()
 
-        # Aguarda a conclusão das threads
-        t_input.join()
-        t_listen.join()
-
-        self.close()
+        try:
+            while self.is_running:
+                t_listen.join(timeout=0.5)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.close()
 
     def close(self):
         """Fecha a conexão do socket com segurança."""
