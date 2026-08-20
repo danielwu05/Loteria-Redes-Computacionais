@@ -52,15 +52,18 @@ class Server:
                             print("invalid command")
                     elif all(item.isnumeric() for item in input):
                         self.client_guess = [int(char) for char in input]
-                        self.result_array = lot.sorting_numbers()
-                        self.correct = lot.checking_numbers(
-                            self.client_guess, self.result_array
-                        )
-                    else:
-                        print("input invalid")
-            except KeyboardInterrupt:
+                        try:
+                            lot.validating_numbers(self.client_guess)
+                            self.result_array = lot.sorting_numbers()
+                            self.correct = lot.checking_numbers(
+                                self.client_guess, self.result_array
+                            )
+                        except ValueError as e:
+                            error_message = f"Error: {str(e)}"
+                            self.conn_socket.send(error_message.encode("utf-8"))
+            except OSError as e:
+                print(f"socket error: {e}")
                 break
-
     def send_results(self):
         while True:
             try:
