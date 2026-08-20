@@ -6,7 +6,7 @@ import sys
 def main():
 
     host = "localhost"
-    port = 8080
+    port = 9090
 
     s = Server(host, port)
     s.start()

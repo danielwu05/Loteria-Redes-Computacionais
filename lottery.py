@@ -28,6 +28,7 @@ class Lottery:
     def checking_numbers(self, numbers, sorted_numbers):
         correct_numbers = []
 
+
         for number in numbers:
             if number in sorted_numbers:
                 correct_numbers.append(number)

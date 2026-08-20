@@ -1,7 +1,7 @@
 from clientObj import Client
 
 host = "localhost"
-port = 8080
+port = 9090
 
 
 def main():
