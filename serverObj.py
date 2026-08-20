@@ -37,7 +37,7 @@ class Server:
                     break
                 else:
                     message = bytesReceived.decode("utf-8")
-                    input = message.split(" ")
+                    input = message.lstrip().split(" ")
                     if len(input) == 2 and input[0][0] == ":" and input[1].isnumeric():
                         if input[0] == ":inicio":
                             print("inicio")
@@ -65,7 +65,7 @@ class Server:
         while True:
             try:
                 time.sleep(10)
-                message = f"\n user guess: {self.client_guess} \n casino results: {self.result_array} \n correct numbers: {self.correct}"
+                message = f"\n user guess: {sorted(self.client_guess)} \n casino results: {sorted(self.result_array)} \n correct numbers: {sorted(self.correct)}"
                 if self.client_guess:
                     self.conn_socket.send(message.encode("utf-8"))
                     self.client_guess.clear()

@@ -42,8 +42,9 @@ class Client:
         """Thread responsável por capturar entrada do teclado e enviar."""
         while self.is_running:
             try:
-                user_input = input()
-                print(type(user_input), user_input)
+                user_input = input("\n> ")
+                if user_input == "":
+                    user_input = "\n"
                 if not user_input:
                     print(user_input)
                     self.socket.shutdown(socket.SHUT_WR)
@@ -64,8 +65,8 @@ class Client:
         t_input = threading.Thread(target=self.input_handler, daemon=True)
         t_listen = threading.Thread(target=self.listen_server, daemon=True)
 
-        t_input.start()
         t_listen.start()
+        t_input.start()
 
         try:
             while self.is_running:
