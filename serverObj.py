@@ -16,6 +16,8 @@ class Server:
         self.correct = []
         self.result_array = []
 
+        self.configs_prontas = [False, False, False]
+
     def start(self):
         self.s.bind((self.host, self.port))
         self.s.listen()
@@ -42,12 +44,15 @@ class Server:
                         if input[0] == ":inicio":
                             print("inicio")
                             lot.setting_initial(int(input[1]))
+                            self.configs_prontas[0] = True
                         elif input[0] == ":fim":
                             print("fim")
                             lot.setting_final(int(input[1]))
+                            self.configs_prontas[1] = True
                         elif input[0] == ":qtd":
                             print("qtd")
                             lot.setting_count(int(input[1]))
+                            self.configs_prontas[2] = True
                         else:
                             print("invalid command")
                     elif all(item.isnumeric() for item in input):
@@ -64,16 +69,24 @@ class Server:
             except OSError as e:
                 print(f"socket error: {e}")
                 break
+
     def send_results(self):
         while True:
             try:
-                time.sleep(10)
-                message = f"\n user guess: {sorted(self.client_guess)} \n casino results: {sorted(self.result_array)} \n correct numbers: {sorted(self.correct)}"
+                tempo_decorrido = 0
+                while tempo_decorrido < 60:
+                    if all(self.configs_prontas) and self.client_guess:
+                        break
+                    time.sleep(1)
+                    tempo_decorrido += 1
+
                 if self.client_guess:
+                    message = f"\n user guess: {sorted(self.client_guess)} \n casino results: {sorted(self.result_array)} \n correct numbers: {sorted(self.correct)}"
                     self.conn_socket.send(message.encode("utf-8"))
                     self.client_guess.clear()
                     self.correct.clear()
                     self.result_array.clear()
+                    self.configs_prontas = [False, False, False]
 
             except KeyboardInterrupt:
                 break
