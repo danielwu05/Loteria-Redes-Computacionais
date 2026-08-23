@@ -42,15 +42,12 @@ class Server:
                     input = message.lstrip().split(" ")
                     if len(input) == 2 and input[0][0] == ":" and input[1].isnumeric():
                         if input[0] == ":inicio":
-                            print("inicio")
                             lot.setting_initial(int(input[1]))
                             self.configs_prontas[0] = True
                         elif input[0] == ":fim":
-                            print("fim")
                             lot.setting_final(int(input[1]))
                             self.configs_prontas[1] = True
                         elif input[0] == ":qtd":
-                            print("qtd")
                             lot.setting_count(int(input[1]))
                             self.configs_prontas[2] = True
                         else:
@@ -81,7 +78,7 @@ class Server:
                     tempo_decorrido += 1
 
                 if self.client_guess:
-                    message = f"\n user guess: {sorted(self.client_guess)} \n casino results: {sorted(self.result_array)} \n correct numbers: {sorted(self.correct)}"
+                    message = f"\n user guess: {sorted(self.client_guess)} \n casino results: {sorted(self.result_array)} \n correct numbers: {sorted(self.correct)} \n press ENTER to continue..."
                     self.conn_socket.send(message.encode("utf-8"))
                     self.client_guess.clear()
                     self.correct.clear()
