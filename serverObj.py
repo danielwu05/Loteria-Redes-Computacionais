@@ -6,10 +6,11 @@ from lottery import Lottery
 
 
 class Server:
-    def __init__(self, host, port):
+    def __init__(self, host, port, max_clients):
         
         self.host = host
         self.port = port
+        self.max_clients = max_clients
 
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -28,61 +29,90 @@ class Server:
         print("server online!")
 
     def client_worker(self, conn_socket, addr):
-
      print(f"worker started for client: {addr}")
+     try:
+        receive_thread = threading.Thread(
+            target=self.process_input,
+            args=(conn_socket,)
+        )
 
-     receive_thread = threading.Thread(
-         target=self.process_input,
-         args=(conn_socket,)
-     )
+        result_thread = threading.Thread(
+            target=self.send_results,
+            args=(conn_socket,)
+        )
 
-     result_thread = threading.Thread(
-        target=self.send_results,
-        args=(conn_socket,)
-     )
+        receive_thread.start()
+        result_thread.start()
 
-     receive_thread.start()
-     result_thread.start()
+        receive_thread.join()
+        result_thread.join()
 
-     receive_thread.join()
-     result_thread.join()
+     finally:
+        self.remove_client(conn_socket)
+        
 
 
     def accept_clients(self):
-        while True:
-         conn_socket, addr = self.s.accept()
+     while True:
+        conn_socket, addr = self.s.accept()
 
-         with self.clients_lock:
-            self.clients.append(conn_socket)
+        with self.clients_lock:
 
-         current_time = datetime.now().strftime("%H:%M")
-         time_connected = f"{current_time} - CONECTADO!!"
+            if len(self.clients) >= self.max_clients:
+                server_full = True
 
-         conn_socket.send(
+            else:
+                self.clients.append(conn_socket)
+                server_full = False
+                clients_connected = len(self.clients)
+
+        if server_full:
+            message = "Server full! Maximum number of clients reached."
+
+            conn_socket.send(
+                message.encode("utf-8")
+            )
+
+            conn_socket.close()
+
+            print(f"connection refused: {addr}")
+
+            continue
+
+        current_time = datetime.now().strftime("%H:%M")
+        time_connected = f"{current_time} - CONECTADO!!"
+
+        conn_socket.send(
             time_connected.encode("utf-8")
-         )
+        )
 
-         print(f"client connected: {addr}")
+        print(f"client connected: {addr}")
+        print(
+            f"clients connected: "
+            f"{clients_connected}/{self.max_clients}"
+        )
 
-         worker = threading.Thread(
+        worker = threading.Thread(
             target=self.client_worker,
             args=(conn_socket, addr)
-         )
-
-         self.client_threads.append(worker)
-         worker.start()
+        )
+        self.client_threads.append(worker)
+        worker.start()
 
     def remove_client(self, conn_socket):
 
      with self.clients_lock:
-        if conn_socket in self.clients:
+
+         if conn_socket in self.clients:
             self.clients.remove(conn_socket)
+
+         clients_connected = len(self.clients)
 
      conn_socket.close()
 
      print(
         f"client removed. "
-        f"clients connected: {len(self.clients)}"
+        f"clients connected: {clients_connected}"
      )
 
     def process_input(self):
@@ -136,6 +166,18 @@ class Server:
             except KeyboardInterrupt:
                 break
 
-    def close_server(self):
-        self.conn_socket.close()
-        self.s.close()
+def close_server(self):
+
+    with self.clients_lock:
+
+        for conn_socket in self.clients:
+
+            try:
+                conn_socket.close()
+
+            except OSError:
+                pass
+
+        self.clients.clear()
+
+    self.s.close()
