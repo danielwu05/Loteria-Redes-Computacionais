@@ -1,4 +1,5 @@
 import socket
+import threading
 from datetime import datetime
 import time
 from lottery import Lottery
@@ -20,12 +21,48 @@ class Server:
         self.s.bind((self.host, self.port))
         self.s.listen()
 
-        (self.conn_socket, addr) = self.s.accept()
+        print("server online!")
+
+    def client_worker(self, conn_socket, addr):
+
+     print(f"worker started for client: {addr}")
+
+     receive_thread = threading.Thread(
+         target=self.process_input,
+         args=(conn_socket,)
+     )
+
+     result_thread = threading.Thread(
+        target=self.send_results,
+        args=(conn_socket,)
+     )
+
+     receive_thread.start()
+     result_thread.start()
+
+     receive_thread.join()
+     result_thread.join()
+
+
+    def accept_clients(self):
+     while True:
+        conn_socket, addr = self.s.accept()
+
         current_time = datetime.now().strftime("%H:%M")
         time_connected = f"{current_time} - CONECTADO!!"
-        self.conn_socket.send(time_connected.encode("utf-8"))
 
-        print("server online!")
+        conn_socket.send(
+            time_connected.encode("utf-8")
+        )
+
+        print(f"client connected: {addr}")
+
+        worker = threading.Thread(
+            target=self.client_worker,
+            args=(conn_socket, addr)
+        )
+
+        worker.start()
 
     def process_input(self):
         lot = Lottery()
