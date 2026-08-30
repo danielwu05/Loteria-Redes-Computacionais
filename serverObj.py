@@ -7,12 +7,14 @@ from lottery import Lottery
 
 class Server:
     def __init__(self, host, port):
+        
         self.host = host
         self.port = port
 
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
+        self.clients = []
         self.client_guess = []
         self.correct = []
         self.result_array = []
