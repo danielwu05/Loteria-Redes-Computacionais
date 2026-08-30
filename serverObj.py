@@ -15,10 +15,12 @@ class Server:
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         self.clients = []
+        self.clients_lock = threading.Lock()
+        self.client_threads = []
         self.client_guess = []
         self.correct = []
         self.result_array = []
-
+        
     def start(self):
         self.s.bind((self.host, self.port))
         self.s.listen()
@@ -47,24 +49,41 @@ class Server:
 
 
     def accept_clients(self):
-     while True:
-        conn_socket, addr = self.s.accept()
+        while True:
+         conn_socket, addr = self.s.accept()
 
-        current_time = datetime.now().strftime("%H:%M")
-        time_connected = f"{current_time} - CONECTADO!!"
+         with self.clients_lock:
+            self.clients.append(conn_socket)
 
-        conn_socket.send(
+         current_time = datetime.now().strftime("%H:%M")
+         time_connected = f"{current_time} - CONECTADO!!"
+
+         conn_socket.send(
             time_connected.encode("utf-8")
-        )
+         )
 
-        print(f"client connected: {addr}")
+         print(f"client connected: {addr}")
 
-        worker = threading.Thread(
+         worker = threading.Thread(
             target=self.client_worker,
             args=(conn_socket, addr)
-        )
+         )
 
-        worker.start()
+         self.client_threads.append(worker)
+         worker.start()
+
+    def remove_client(self, conn_socket):
+
+     with self.clients_lock:
+        if conn_socket in self.clients:
+            self.clients.remove(conn_socket)
+
+     conn_socket.close()
+
+     print(
+        f"client removed. "
+        f"clients connected: {len(self.clients)}"
+     )
 
     def process_input(self):
         lot = Lottery()
