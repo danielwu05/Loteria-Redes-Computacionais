@@ -43,17 +43,15 @@ class Client:
         while self.is_running:
             try:
                 user_input = input("\n> ")
-                if user_input == "":
-                    user_input = "\n"
                 if not user_input:
-                    print(user_input)
-                    self.socket.shutdown(socket.SHUT_WR)
-                    self.is_running = False
-                    break
+                    continue
 
                 self.socket.send(user_input.encode("utf-8"))
+
+                if user_input.strip().lower() in ["exit","quit", "sair"]:
+                    self.is_running = False
+                    break
             except Exception:
-                print("a")
                 break
         self.close()
 
