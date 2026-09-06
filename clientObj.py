@@ -32,8 +32,12 @@ class Client:
                     break
 
                 mensagem = data.decode("utf-8", errors="replace")
-                print(mensagem, end="\n", flush=True)
-                time.sleep(0.1)
+                # print(mensagem, end="\n", flush=True)
+
+                print(f"\r{mensagem}")
+
+                print("\n> ", end="", flush=True)
+                # time.sleep(0.1)
             except Exception:
                 break
         self.close()
@@ -42,16 +46,15 @@ class Client:
         """Thread responsável por capturar entrada do teclado e enviar."""
         while self.is_running:
             try:
-                user_input = input("\n> ")
+                user_input = input()
                 if user_input == "":
                     user_input = "\n"
                 if not user_input:
-                    print(user_input)
-                    self.socket.shutdown(socket.SHUT_WR)
-                    self.is_running = False
-                    break
+                    print("> ", end="", flush=True)
+                    continue
 
                 self.socket.send(user_input.encode("utf-8"))
+                print("\n\n")
             except Exception:
                 print("a")
                 break

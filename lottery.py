@@ -2,7 +2,6 @@ import random
 
 
 class Lottery:
-
     def __init__(self):
         self.initial = 0
         self.final = 100
@@ -11,20 +10,17 @@ class Lottery:
     def setting_initial(self, ini):
         self.initial = ini
 
-    def setting_final(self,fi):
-        self.final = fi    
+    def setting_final(self, fi):
+        self.final = fi
 
-    def setting_count(self,co):
+    def setting_count(self, co):
         self.count = co
 
     def sorting_numbers(self):
-        numbers = random.sample(
-            range(self.initial, self.final + 1),
-            self.count
-        )
+        numbers = random.sample(range(self.initial, self.final + 1), self.count)
 
         return numbers
-    
+
     def validating_numbers(self, numbers):
 
         # Verifica quantidade
@@ -44,9 +40,11 @@ class Lottery:
     def checking_numbers(self, numbers, sorted_numbers):
         correct_numbers = []
 
-
         for number in numbers:
             if number in sorted_numbers:
                 correct_numbers.append(number)
 
         return correct_numbers
+
+    def get_params(self):
+        return [self.initial, self.final, self.count]
