@@ -56,7 +56,6 @@ class Client:
                 self.socket.send(user_input.encode("utf-8"))
                 print("\n\n")
             except Exception:
-                print("a")
                 break
         self.close()
 
