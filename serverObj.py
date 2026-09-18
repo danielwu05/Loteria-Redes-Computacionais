@@ -20,10 +20,6 @@ class Server:
         self.clients_lock = threading.Lock()
         self.client_threads = []
 
-        self.responseQueue = queue.Queue()
-
-        self.configs_prontas = [False, False, False]
-
     def start(self):
         self.s.bind((self.host, self.port))
         self.s.listen()
@@ -103,8 +99,11 @@ class Server:
                 self.clients.remove(conn_socket)
 
             clients_connected = len(self.clients)
-
-        conn_socket.close()
+            self.client_threads = [t for t in self.client_threads if t.is_alive()]
+        try:
+            conn_socket.close()
+        except OSError:
+            pass
 
         print(
             f"client removed. clients connected: {clients_connected}/{self.max_clients}"
@@ -123,7 +122,6 @@ class Server:
                 if not bytesReceived:
                     print("client disconnected")
                     client_state["running"] = False
-                    self.remove_client(conn_socket)
                     break
                 else:
                     message = bytesReceived.decode("utf-8")
@@ -155,9 +153,13 @@ class Server:
                     except ValueError as e:
                         error_message = f"Error: {str(e)}"
                         client_state["running"] = False
-                        conn_socket.send(error_message.encode("utf-8"))
+                        try: 
+                            conn_socket.send(error_message.encode("utf-8"))
+                        except OSError:
+                            pass
             except OSError as e:
                 print(f"socket error: {e}")
+                client_state["running"] = False
                 break
 
     def send_results(self, conn_socket, client_state):
@@ -176,15 +178,18 @@ class Server:
                     break
 
                 with client_state["lock"]:
-                    lot.validating_numbers(client_state["bets"])
-                    result_array = lot.sorting_numbers()
-                    correct = lot.checking_numbers(client_state["bets"], result_array)
+                    if client_state["bets"]:
+                        lot.validating_numbers(client_state["bets"])
+                        result_array = lot.sorting_numbers()
+                        correct = lot.checking_numbers(client_state["bets"], result_array)
 
-                    message = f"user guess: {sorted(client_state['bets'])} \n casino results: {sorted(result_array)} \n correct numbers: {sorted(correct)}"
+                        message = f"user guess: {sorted(client_state['bets'])} \n casino results: {sorted(result_array)} \n correct numbers: {sorted(correct)}"
 
-                    conn_socket.send(message.encode("utf-8"))
+                        conn_socket.send(message.encode("utf-8"))
 
-            except KeyboardInterrupt:
+                        client_state["bets"] = []
+
+            except (KeyboardInterrupt, OSError):
                 break
 
             finally:
@@ -196,10 +201,12 @@ class Server:
             for conn_socket in self.clients:
                 try:
                     conn_socket.close()
-
                 except OSError:
                     pass
 
             self.clients.clear()
 
-        self.s.close()
+        try:
+            self.s.close()
+        except OSError:
+            pass
