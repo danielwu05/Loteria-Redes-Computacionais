@@ -16,6 +16,9 @@ class Client:
             self.is_running = True
             print("Conectado ao servidor. Digite os comandos ou apostas.")
             return True
+        except (socket.error, OSError) as e:
+            print(f"Erro ao conectar ao servidor: {e}")
+            return False
         except Exception as e:
             print(f"Erro ao conectar ao servidor: {e}")
             return False
@@ -31,13 +34,19 @@ class Client:
                     break
 
                 mensagem = data.decode("utf-8", errors="replace")
-                # print(mensagem, end="\n", flush=True)
-
                 print(f"\r{mensagem}")
-
                 print("\n> ", end="", flush=True)
-                # time.sleep(0.1)
-            except Exception:
+
+            except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, OSError):
+                if self.is_running:
+                    print("\nConexão com o servidor foi perdida.")
+                self.is_running = False
+                break
+
+            except Exception as e:
+                if self.is_running:
+                    print(f"\nErro na recepção de dados: {e}")
+                self.is_running = False
                 break
         self.close()
 
@@ -54,7 +63,18 @@ class Client:
 
                 self.socket.send(user_input.encode("utf-8"))
                 print("\n\n")
-            except Exception:
+            except (EOFError, KeyboardInterrupt):
+                self.is_running = False
+                break
+            except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, OSError):
+                if self.is_running:
+                    print("Erro ao enviar dados: Conexão encerrada.")
+                self.is_running = False
+                break
+            except Exception as e:
+                if self.is_running:
+                    print(f"Erro inesperado no envio: {e}")
+                self.is_running = False
                 break
         self.close()
 
@@ -72,7 +92,7 @@ class Client:
         try:
             while self.is_running:
                 t_listen.join(timeout=0.5)
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             pass
         finally:
             self.close()
@@ -80,6 +100,10 @@ class Client:
     def close(self):
         """Fecha a conexão do socket com segurança."""
         self.is_running = False
+        try:
+            self.socket.shutdown(socket.SHUT_RDWR)
+        except Exception:
+            pass
         try:
             self.socket.close()
         except Exception:

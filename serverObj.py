@@ -19,12 +19,18 @@ class Server:
         self.clients = []
         self.clients_lock = threading.Lock()
         self.client_threads = []
+        self.is_running = False
 
     def start(self):
-        self.s.bind((self.host, self.port))
-        self.s.listen()
+        try:
+            self.s.bind((self.host, self.port))
+            self.s.listen()
+            self.is_running = True
+            print("server online!")
+        except Exception as e:
+            print(f"Erro ao inicializar o servidor: {e}")
+            raise e
 
-        print("server online!")
 
     def client_worker(self, conn_socket, addr):
         print(f"worker started for client: {addr}")
@@ -50,13 +56,21 @@ class Server:
 
             receive_thread.join()
             result_thread.join()
+        except Exception as e:
+            print(f"Erro inesperado no worker do cliente {addr}: {e}")
 
         finally:
+            client_state["running"] = False
             self.remove_client(conn_socket)
 
     def accept_clients(self):
-        while True:
-            conn_socket, addr = self.s.accept()
+        while self.is_running:
+            try:
+                conn_socket, addr = self.s.accept()
+            except (OSError, socket.error):
+                if not self.is_running:
+                    break
+                continue
 
             with self.clients_lock:
                 if len(self.clients) >= self.max_clients:
@@ -69,28 +83,39 @@ class Server:
 
             if server_full:
                 message = "Server full! Maximum number of clients reached."
-
-                conn_socket.send(message.encode("utf-8"))
-
-                conn_socket.close()
+                try:
+                    conn_socket.send(message.encode("utf-8"))
+                except OSError:
+                    pass
+                finally:
+                    try:
+                        conn_socket.close()
+                    except OSError:
+                        pass
 
                 print(f"connection refused: {addr}")
 
                 continue
 
-            current_time = datetime.now().strftime("%H:%M")
-            time_connected = f"{current_time} - CONECTADO!!"
+            try:
+                current_time = datetime.now().strftime("%H:%M")
+                time_connected = f"{current_time} - CONECTADO!!"
 
-            conn_socket.send(time_connected.encode("utf-8"))
+                conn_socket.send(time_connected.encode("utf-8"))
 
-            print(f"client connected: {addr}")
-            print(f"clients connected: {clients_connected}/{self.max_clients}")
+                print(f"client connected: {addr}")
+                print(f"clients connected: {clients_connected}/{self.max_clients}")
 
-            worker = threading.Thread(
-                target=self.client_worker, args=(conn_socket, addr)
-            )
-            self.client_threads.append(worker)
-            worker.start()
+                worker = threading.Thread(
+                    target=self.client_worker, args=(conn_socket, addr)
+                )
+                self.client_threads.append(worker)
+                worker.start()
+            except(OSError, socket.error) as e:
+                print(f"Erro ao inicializar conexão com cliente {addr}: {e}")
+                self.remove_client(conn_socket)
+
+        
 
     def remove_client(self, conn_socket):
 
@@ -100,6 +125,11 @@ class Server:
 
             clients_connected = len(self.clients)
             self.client_threads = [t for t in self.client_threads if t.is_alive()]
+        try:
+            conn_socket.close()
+        except OSError:
+            pass
+
         try:
             conn_socket.close()
         except OSError:
@@ -152,13 +182,17 @@ class Server:
 
                     except ValueError as e:
                         error_message = f"Error: {str(e)}"
-                        client_state["running"] = False
                         try: 
                             conn_socket.send(error_message.encode("utf-8"))
                         except OSError:
-                            pass
-            except OSError as e:
-                print(f"socket error: {e}")
+                            client_state["running"] = False
+                        break
+            except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, OSError) as e:
+                print(f"socket error or client disconnected abruptly: {e}")
+                client_state["running"] = False
+                break
+            except Exception as e:
+                print(f"unexpected error processing input: {e}")
                 client_state["running"] = False
                 break
 
@@ -179,17 +213,25 @@ class Server:
 
                 with client_state["lock"]:
                     if client_state["bets"]:
-                        lot.validating_numbers(client_state["bets"])
-                        result_array = lot.sorting_numbers()
-                        correct = lot.checking_numbers(client_state["bets"], result_array)
+                        try:
+                            lot.validating_numbers(client_state["bets"])
+                            result_array = lot.sorting_numbers()
+                            correct = lot.checking_numbers(client_state["bets"], result_array)
 
-                        message = f"user guess: {sorted(client_state['bets'])} \n casino results: {sorted(result_array)} \n correct numbers: {sorted(correct)}"
-
-                        conn_socket.send(message.encode("utf-8"))
+                            message = f"user guess: {sorted(client_state['bets'])} \n casino results: {sorted(result_array)} \n correct numbers: {sorted(correct)}"
+                            conn_socket.send(message.encode("utf-8"))
+                        except ValueError as ve:
+                            error_message = f"Invalid Bet Error: {str(ve)}\n"
+                            conn_socket.send(error_message.encode("utf-8"))
 
                         client_state["bets"] = []
 
-            except (KeyboardInterrupt, OSError):
+            except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, OSError):
+                client_state["running"] = False
+                break
+            except Exception as e:
+                print(f"unexpected error sending results: {e}")
+                client_state["running"] = False
                 break
 
             finally:
@@ -197,8 +239,13 @@ class Server:
                     client_state["Flags"][i] = False
 
     def close_server(self):
+        self.is_running = False
         with self.clients_lock:
             for conn_socket in self.clients:
+                try:
+                    conn_socket.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
                 try:
                     conn_socket.close()
                 except OSError:
