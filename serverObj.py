@@ -31,14 +31,12 @@ class Server:
             print(f"Erro ao inicializar o servidor: {e}")
             raise e
 
-
     def client_worker(self, conn_socket, addr):
         print(f"worker started for client: {addr}")
 
         client_state = {
             "lottery": Lottery(),
             "bets": [],
-            "Flags": [False, False, False, False],
             "lock": threading.Lock(),
             "running": True,
         }
@@ -111,11 +109,9 @@ class Server:
                 )
                 self.client_threads.append(worker)
                 worker.start()
-            except(OSError, socket.error) as e:
+            except (OSError, socket.error) as e:
                 print(f"Erro ao inicializar conexão com cliente {addr}: {e}")
                 self.remove_client(conn_socket)
-
-        
 
     def remove_client(self, conn_socket):
 
@@ -139,13 +135,23 @@ class Server:
             f"client removed. clients connected: {clients_connected}/{self.max_clients}"
         )
 
+    def is_int_guess(self, items):
+        if not items:
+            return False
+        for item in items:
+            try:
+                int(item)
+            except ValueError:
+                return False
+        return True
+
     def process_input(self, conn_socket, client_state):
 
         lot = client_state["lottery"]
         while client_state["running"]:
             try:
                 lot_info = lot.get_params()
-                send = f"lottery\nstart {lot_info[0]}\nend {lot_info[1]}\nquantity {lot_info[2]}"
+                send = f"\n\n\n\nconfigurações da loteria\n\ninicio: {lot_info[0]}\nfim: {lot_info[1]}\nquantidade: {lot_info[2]}"
                 conn_socket.send(send.encode("utf-8"))
 
                 bytesReceived = conn_socket.recv(1024)
@@ -157,37 +163,47 @@ class Server:
                     message = bytesReceived.decode("utf-8")
                     input = message.lstrip().split(" ")
                     try:
-                        if (
-                            len(input) == 2
-                            and input[0][0] == ":"
-                            and input[1].isnumeric()
-                        ):
+                        if len(input) == 2 and input[0][0] == ":":
+                            try:
+                                val = int(input[1])
+                            except ValueError:
+                                raise ValueError("O valor deve ser um número inteiro")
+
                             with client_state["lock"]:
                                 if input[0] == ":inicio":
-                                    lot.setting_initial(int(input[1]))
-                                    client_state["Flags"][0] = True
+                                    lot.setting_initial(val)
                                 elif input[0] == ":fim":
-                                    lot.setting_final(int(input[1]))
-                                    client_state["Flags"][1] = True
+                                    lot.setting_final(val)
                                 elif input[0] == ":qtd":
-                                    lot.setting_count(int(input[1]))
-                                    client_state["Flags"][2] = True
+                                    lot.setting_count(val)
                                 else:
                                     print("invalid command")
-                        elif all(item.isnumeric() for item in input):
+                        elif self.is_int_guess(input):
                             with client_state["lock"]:
                                 client_guess = [int(char) for char in input]
+                                if any(n < 0 for n in client_guess):
+                                    raise ValueError(
+                                        "A aposta não pode conter números negativos"
+                                    )
                                 client_state["bets"] = client_guess
-                                client_state["Flags"][3] = True
+
+                        else:
+                            raise ValueError(
+                                "Uso: :inicio <NUMERO>, :fim <NUMERO> ou :qtd <NUMERO>"
+                            )
 
                     except ValueError as e:
                         error_message = f"Error: {str(e)}"
-                        try: 
+                        try:
                             conn_socket.send(error_message.encode("utf-8"))
                         except OSError:
                             client_state["running"] = False
-                        break
-            except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, OSError) as e:
+            except (
+                ConnectionResetError,
+                ConnectionAbortedError,
+                BrokenPipeError,
+                OSError,
+            ) as e:
                 print(f"socket error or client disconnected abruptly: {e}")
                 client_state["running"] = False
                 break
@@ -198,45 +214,55 @@ class Server:
 
     def send_results(self, conn_socket, client_state):
         while client_state["running"]:
-            lot = client_state["lottery"]
             try:
                 for _ in range(60):
                     if not client_state["running"]:
                         return
                     time.sleep(1)
 
-                    if all(client_state["Flags"]) or client_state["Flags"][3]:
-                        break
-
+                lot = client_state["lottery"]
                 if not client_state["running"]:
                     break
 
+                result_array = lot.sorting_numbers()
+
                 with client_state["lock"]:
+                    message = ""
                     if client_state["bets"]:
                         try:
                             lot.validating_numbers(client_state["bets"])
-                            result_array = lot.sorting_numbers()
-                            correct = lot.checking_numbers(client_state["bets"], result_array)
+                            correct = lot.checking_numbers(
+                                client_state["bets"], result_array
+                            )
 
-                            message = f"user guess: {sorted(client_state['bets'])} \n casino results: {sorted(result_array)} \n correct numbers: {sorted(correct)}"
-                            conn_socket.send(message.encode("utf-8"))
+                            if result_array:
+                                message = f"user guess: {sorted(client_state['bets'])}\n casino results: {sorted(result_array)}\n correct numbers: {sorted(correct)}"
+
                         except ValueError as ve:
                             error_message = f"Invalid Bet Error: {str(ve)}\n"
                             conn_socket.send(error_message.encode("utf-8"))
 
-                        client_state["bets"] = []
+                        client_state["bets"].clear()
 
-            except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, OSError):
+                    else:
+                        message = (
+                            f"no user guess\n casino results: {sorted(result_array)}"
+                        )
+
+                    conn_socket.send(message.encode("utf-8"))
+
+            except (
+                ConnectionResetError,
+                ConnectionAbortedError,
+                BrokenPipeError,
+                OSError,
+            ):
                 client_state["running"] = False
                 break
             except Exception as e:
                 print(f"unexpected error sending results: {e}")
                 client_state["running"] = False
                 break
-
-            finally:
-                for i in range(4):
-                    client_state["Flags"][i] = False
 
     def close_server(self):
         self.is_running = False

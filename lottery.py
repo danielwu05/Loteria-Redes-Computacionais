@@ -8,12 +8,34 @@ class Lottery:
         self.count = 5
 
     def setting_initial(self, ini):
+
+        if ini < 0:
+            raise ValueError("O início não pode ter valor menor que zero")
+        if self.final <= ini:
+            raise ValueError("O início deve ser um valor menor que o final")
+
+        if self.final - ini + 1 < self.count:
+            raise ValueError("O intervalo ficará menor que a quantidade atual")
+
         self.initial = ini
 
     def setting_final(self, fi):
+
+        if fi < 0:
+            raise ValueError("O final não pode ter valor menor que zero")
+        if fi <= self.initial:
+            raise ValueError("O final deve ser um valor maior que o inicial")
+
+        if fi - self.initial + 1 < self.count:
+            raise ValueError("O intervalo ficará menor que a quantidade atual")
+
         self.final = fi
 
     def setting_count(self, co):
+        if co <= 0:
+            raise ValueError("A Quantidade não pode ter valor menor ou igual a zero")
+        if self.final - self.initial + 1 < co:
+            raise ValueError("A Quantidade não pode ser maior que o intervalo inserido")
         self.count = co
 
     def sorting_numbers(self):
